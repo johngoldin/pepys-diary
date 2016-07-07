@@ -1,0 +1,10 @@
+name: Search_Pepys
+account: goldin
+server: shinyapps.io
+appId: 99663
+bundleId: 452520
+url: https://goldin.shinyapps.io/Search_Pepys/
+when: 1463358923.43475
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: word_counts.R|word_in_context.R
