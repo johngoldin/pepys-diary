@@ -1,0 +1,23 @@
+from: http://www.gutenberg.org/cache/epub/4200/pg4200.txt
+Project Gutenberg's Diary of Samuel Pepys, Complete, by Samuel Pepys
+
+This eBook is for the use of anyone anywhere at no cost and with
+almost no restrictions whatsoever.  You may copy it, give it away or
+re-use it under the terms of the Project Gutenberg License included
+with this eBook or online at www.gutenberg.org
+
+
+Title: Diary of Samuel Pepys, Complete
+       Transcribed From The Shorthand Manuscript In The Pepysian
+       Library Magdalene College Cambridge By The Rev. Mynors
+       Bright
+
+Author: Samuel Pepys
+
+Commentator: Lord Braybrooke
+
+Editor: Henry B. Wheatley
+
+Release Date: June, 2003 [EBook #4200]
+Posting Date: March 22, 2009
+[This file last updated December 26, 2010]
