@@ -1,0 +1,28 @@
+---
+title: "html_attrs issue"
+author: "John Goldin"
+date: "4/7/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r cars}
+some_html <- "With <a href=\"http://www.pepysdiary.com/encyclopedia/619/\">  and a missing reference <a>home</a> "
+
+  ids <- some_html %>%  read_html() 
+  ids <- ids  %>% html_nodes("a")    # see vignette("selectorgadget")
+    ids <- ids %>% html_attrs() 
+    if(length(ids) < 1) print("html attrs")
+    ids <- ids %>% keep(function(x) length(x) == 1)
+    ids <- ids %>% keep(function(x) str_detect(x, "www.pepysdiary.com/encyclopedia"))   # verify link is to encyclopedia entry
+    if(length(ids) < 1) print("str_detect")
+    ids <- ids %>% str_extract("\\d+")    # extract id from entry
+
+```
+

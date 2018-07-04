@@ -1,0 +1,151 @@
+---
+title: "rvest and pepys"
+output: html_notebook
+---
+
+
+
+```{r setup}
+library(tidyverse)
+library(rvest)
+```
+
+https://www.pepysdiary.com/diary/1665/03/19/
+
+```{r}
+people_lines <- read_lines("https://www.pepysdiary.com/encyclopedia/people/") %>%
+  keep(function(x) str_detect(x, "/encyclopedia/\\d"))   # verify link is to encyclopedia entry
+people_entry_id <- people_lines %>%
+  str_extract("[0-9]+")
+people_entry_text <- people_lines %>%
+  # extract uses a positive look-behind assertion and also a positive look-ahead assertion
+  str_extract("(?<=[0-9]/\\\">).+(?=</a>)")
+people_name_parens <- people_entry_text %>%
+  str_extract("(?<=\\().+(?=\\))")
+people_name <- ifelse(is.na(people_name_parens), people_entry_text,
+                      str_extract(people_entry_text, ".+(?=\\()"))
+people_df <- data_frame(entry_id = people_entry_id, name = people_name, parens = people_name_parens)
+```
+
+Next, code that will get the ID of an encyclopedia entry
+```{r}
+# just read in the lines for an entry. Thee's a line like this near top:
+#	<title>Exchequer offices (The Diary of Samuel Pepys)</title>
+# Find that line and extract the title.
+# test:  entry_title("6627x")      entry_title("6627")     entry_title("art")
+entry_title <- function(id) {
+  # possibly_url = possibly(url, otherwise = NULL)
+  # xx <- possibly_url(str_c("https://www.pepysdiary.com/encyclopedia/", id, "/"), open = "r")
+  # if (is.null(xx)) return(NA_character_)
+  # possibly_readLines <- possibly(readLines, NA_character_, quiet = TRUE)
+  title <- readLines(str_c("https://www.pepysdiary.com/encyclopedia/", id, "/"), n = 15) 
+  #if (is.na(title)) return(NA_character_)
+  title <- title %>%
+    keep(function(x) str_detect(x, "<title>")) %>%
+    str_extract("(?<=<title>).+(?= \\(The Diary)")
+  if (title == "") return(NA_character_)
+  if (is.null(title)) return(NA_character_)
+  return(title)
+}
+```
+
+
+	
+```{r pepys_entry_page}
+#test:  pepys_entry_page(entry_df$date[20])
+pepys_entry_page_original <- function(d) {
+  read_html(str_c("https://www.pepysdiary.com/diary/", sprintf("%04d/%02d/%02d/", year(d), month(d), day(d)))) %>%
+  html_nodes(".manuscript-large a") %>%   # see vignette("selectorgadget")
+  html_attrs() %>% 
+  keep(function(x) str_detect(x, "www.pepysdiary.com/encyclopedia")) %>%  # verify link is to encyclopedia entry
+  str_extract("\\d+")    # extract id from entry
+}
+
+# redo, but this time using api
+#  test:   xx <- pepys_entry_page(ymd("1666-09-02"))
+pepys_entry_page <- function(d) {
+  # API URL: https://www.pepysdiary.com/api/v1/entries/1666-09-02
+  fromJSON(str_c("https://www.pepysdiary.com/api/v1/entries/", sprintf("%04d-%02d-%02d", year(d), month(d), day(d))))$entry_html %>% 
+  read_html() %>%
+  html_nodes("a") %>%   # see vignette("selectorgadget")
+  html_attrs() %>% 
+  keep(function(x) str_detect(x, "www.pepysdiary.com/encyclopedia")) %>%  # verify link is to encyclopedia entry
+  str_extract("\\d+")    # extract id from entry
+}
+
+# Return df rather than vector of ids
+#  test:   xx <- pepys_entry_page_df(ymd("1666-09-02"))
+pepys_entry_page_df <- function(d) {
+  ids <- fromJSON(str_c("https://www.pepysdiary.com/api/v1/entries/", sprintf("%04d-%02d-%02d", year(d), month(d), day(d))))$entry_html %>% 
+  read_html() %>%
+  html_nodes("a") %>%   # see vignette("selectorgadget")
+  html_attrs() %>% 
+  keep(function(x) str_detect(x, "www.pepysdiary.com/encyclopedia")) %>%  # verify link is to encyclopedia entry
+  str_extract("\\d+")    # extract id from entry
+  return(data_frame(date = d, id = ids))
+}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+# accumulate info for 150 entries
+several <- map(entry_df$date[1:150], pepys_entry_page)
+save(several, file = "several list of 150 entries with ids.RData")
+
+```
+
+OK, so we have our building blocks. Let's use purrr to apply the pepys_entry_page function to a number of entries and gather up the result.
+
+```{r}
+# This code works, but it takes an unreasonably long amount of
+# time to run. For practical purposes, I need something faster.
+# Whoa, I forgot that pepys_entry_page goes off and reads
+# an hrml page each time it is called. That's what is slow.
+refs <- map2_dfr(
+  entry_df$date[1:150],
+  map(entry_df$date[1:150], pepys_entry_page), 
+  function(x, y) {
+    data_frame(date = x, id = y)
+  })
+save(refs, file = "refs for 1-150.RData")
+tidy_pepys_objects <- refs %>% group_by(date, id) %>% count() %>% left_join(people_df, by = c("id" = "entry_id"))
+```
+
+```{r}
+stop("This is busted and just wastes time.")
+# let's try an alternate version. this has an execution error
+system.time(refs2 <- map_dfr(
+  entry_df$date,
+  pepys_entry_page_df
+))
+```
+
+```{r}
+# find names for common non-people objects
+objects1 <- tidy_pepys_objects %>% group_by(id) %>% filter(is.na(name)) %>%
+  tally() %>% arrange(desc(nn))
+system.time(object_names <- map(objects1$id, entry_title))
+add_names <- data_frame(id = objects1$id, object_names = flatten_chr(object_names) )
+save(add_names, file = "add_names of non-people.RData") 
+
+tidy_pepys_objects <- tidy_pepys_objects %>% left_join(add_names, by = c("id")) %>%
+  mutate(name = ifelse(is.na(name), object_names, name))
+```
+
+```{r}
+#date exploration 
+d1 <- ymd_hm("16600101 00-00")
+r1 <- as.double(d1)
+r2 <- as.double(entry_df$date[1])
+as.POSIXct(r1, origin = lubridate::origin, tz = "UTC")
+```
+
+```{r}
+zz <- GET("https://www.pepysdiary.com/api/v1/entries/1666-09-02")
+```
+

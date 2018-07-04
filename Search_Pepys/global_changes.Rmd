@@ -1,0 +1,41 @@
+---
+title: "Global Changes"
+output: html_notebook
+---
+
+first, change Lord Generall to Lord_General and
+              Lord General to Lord_General
+
+```{r}
+save_entry_text <- entry_df$entry_text
+# entry_df$entry_text <- save_entry_text
+# St Albans appears to be Wingate, Edward (MP St Albans 1640-8)
+system.time(entry_df$entry_text <- str_replace_all(entry_df$entry_text, "my Lord of St. Albans", 
+                                       str_c(pepys_names_base$id[pepys_names_base$last_name == "Wingate"], "_Wingate")))
+
+my_something4 <- fourway_separated %>% 
+  filter(word1 %in% c("my", "the", "My", "The"), cap2, word3 %in% c("of", "de"), cap4,
+         !str_detect(word4, "['/']"), !(word2 %in% non_titles )) %>%
+  mutate(from = str_c(word1, word2, word3, word4, sep = " "),
+         search_term = word4, to = str_c(word2, word3, word4, sep = "_"),
+         title = word2,
+         first_name ="", last_name = "", id = "") %>%
+  select(from, search_term, title, first_name, last_name, to, id)
+to_stuff <- my_something4$to
+names(to_stuff) <- my_something4$from
+system.time(entry_df$entry_text <- str_replace_all(entry_df$entry_text, to_stuff))
+#test case:  str_replace_all(c("no abc", "and the King of Spain is here"), to_stuff)
+
+
+my_something3 <- trigrams_separated %>% 
+  filter(word1 %in% c("my"), cap2, cap3,
+         !str_detect(word3, "['/']"), !(word2 %in% non_titles )) %>%
+  mutate(from = str_c(word1, word2, word3, sep = " "),
+         search_term = word3, to = str_c(word2, word3, sep = "_"),
+         title = word2,
+         first_name ="", last_name = "", id = "") %>%
+  select(from, search_term, title, first_name, last_name, to, id)
+to_stuff <- my_something$to
+
+```
+

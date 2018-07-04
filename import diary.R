@@ -1,6 +1,7 @@
 # I'm using this info from tidytext as my model: 
 # https://github.com/juliasilge/tidytext#tidytext-text-mining-using-dplyr-ggplot2-and-other-tidy-tools
 
+library(tidyverse)
 library(readr)
 library(lubridate)
 library(plyr)
